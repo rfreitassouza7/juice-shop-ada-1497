@@ -18,6 +18,25 @@ export function profileImageUrlUpload () {
     if (req.body.imageUrl !== undefined) {
       const url = req.body.imageUrl
       if (url.match(/(.)*solve\/challenges\/server-side(.)*/) !== null) req.app.locals.abused_ssrf_bug = true
+      // SSRF protection: Allow only specific hostnames and protocols
+      let parsedUrl
+      try {
+        parsedUrl = new URL(url)
+      } catch (e) {
+        return res.status(400).send('Malformed URL')
+      }
+      // Only allow http and https
+      const allowedProtocols = ['http:', 'https:']
+      const allowedHostnames = [
+        // Add allowed domains below, e.g.:
+        'images.example.com', 'cdn.example.com'
+      ]
+      if (!allowedProtocols.includes(parsedUrl.protocol)) {
+        return res.status(400).send('Protocol not allowed')
+      }
+      if (!allowedHostnames.includes(parsedUrl.hostname)) {
+        return res.status(400).send('Hostname not allowed')
+      }
       const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
       if (loggedInUser) {
         try {
